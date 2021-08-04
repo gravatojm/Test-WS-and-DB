@@ -8,6 +8,8 @@ package com.mycompany.projetotesteapi;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -40,47 +42,32 @@ public class UserDAO {
     
     public List<User> listAll() {
         // return new ArrayList<User>(data);
-        List<User> list = dbcontroller.listAll();
+        List<User> list = new ArrayList<>();
+        try {
+            list = dbcontroller.listAll();
+        } catch (Exception ex) {
+            Logger.getLogger(UserDAO.class.getName()).log(Level.SEVERE, null, ex);
+        }
         return list;
     }
     
     public int add(User user) {
-        
-//        int newId = data.size() + 1;
-//        user.setId(newId);
-//        data.add(user);       
-//        return newId;
-
         int newId = dbcontroller.createUser(user);
         return newId;
     }
     
     public User get(int id) {
-        User userToFind = new User(id);
-        int index = data.indexOf(userToFind);
-        if(index >= 0) {
-            return data.get(index);
-        }
-        return null;
+          User userToFind = dbcontroller.getUser(id);
+          return userToFind;
     }
     
     public boolean update(User user) {
-        int index = data.indexOf(user);
-        if(index >= 0) {
-            data.set(index, user);
-            return true;
-        }
-        return false;
+        return dbcontroller.editUser(user);
     }
     
     public boolean delete(int id) {
-        User userToFind = new User(id);
-        int index = data.indexOf(userToFind);
-        if(index >= 0) {
-            data.remove(index);
-            return true;
-        }
-        return false;
+        boolean res = dbcontroller.deleteUser(id);
+        return res;
     }
     
 }

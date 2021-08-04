@@ -32,6 +32,7 @@ public class UserResource {
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public List<User> list() {
+        System.out.println("listAll");
         List lista = dao.listAll();
         return dao.listAll();
     }
@@ -49,6 +50,7 @@ public class UserResource {
     @GET
     @Path("{id}")
     public Response get(@PathParam("id") int id) {
+        System.out.println("read - id:" + id);
         User user = dao.get(id);
         if(user != null) {
             return Response.ok(user, MediaType.APPLICATION_JSON).build();
