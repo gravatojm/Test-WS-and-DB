@@ -10,7 +10,9 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -33,6 +35,8 @@ public class DatabaseController {
     
     private Connection connection;
     
+    private SimpleDateFormat dateFormatter;
+    
     public DatabaseController() {
 
     }
@@ -45,16 +49,7 @@ public class DatabaseController {
     }
     
     private void connectToDatabase() { 
-
         try {
-
-//        try {
-//            connection = DriverManager.getConnection(jdbcURL, db_username, db_password);
-//            System.out.println("Connected to database.");
-//        } catch (SQLException e) {
-//            System.out.println("Error in connecting to database server!");
-//            e.printStackTrace();
-//        }
             InitialContext cxt = new InitialContext();
             if (cxt == null) {
                 throw new Exception("No context!");
@@ -76,8 +71,7 @@ public class DatabaseController {
             Logger.getLogger(DatabaseController.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
-    
-    
+      
     public void closeConnection() {       
         try {
             connection.close();
@@ -88,28 +82,23 @@ public class DatabaseController {
     }
     
     public int createUser(User user) {
-        closeConnection();
         try {
             connectToDatabase();
         } catch (Exception ex) {
             Logger.getLogger(DatabaseController.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        
+        }       
         // Retorna o ID do novo registo na DB. 
         // Depois usa-se o ResultSet para saber qual e'       
-        String sql = "INSERT INTO users (name, email) VALUES (?, ?) RETURNING id;";
-        
+        String sql = "INSERT INTO users (name, email) VALUES (?, ?) RETURNING id;";        
         try {   
             PreparedStatement statement = connection.prepareStatement(sql);
             statement.setString(1, user.getName());
             statement.setString(2, user.getEmail());
             // O .executeUpdate() so' retorna um int (1 ou 0)
             // int rows = statement.executeUpdate();
-            statement.execute();
-            
+            statement.execute();            
             // Ve no result entrada gerada para conseguir saber o id.
-            // Nao sei se retorna sempre o correto. confirmar.
-            
+            // Nao sei se retorna sempre o correto. confirmar.            
             ResultSet generatedKeys = statement.getResultSet();
             if(generatedKeys.next()) {
                 user.setId(generatedKeys.getInt(1));
@@ -118,7 +107,8 @@ public class DatabaseController {
             }           
         } catch (SQLException e) {
             e.printStackTrace();
-        }       
+        }
+        logToDatabase("CREATED USER", user.getId(), "Created user data with id " + user.getId());
         closeConnection();       
         return user.getId();
     }
@@ -148,21 +138,24 @@ public class DatabaseController {
         } catch (SQLException ex) {
             Logger.getLogger(DatabaseController.class.getName()).log(Level.SEVERE, null, ex);
         }
+        logToDatabase("GET USER", id, "Got user data with id " + id);
         closeConnection();
         return user;
     }
     
     public boolean editUser(User user) {
         connectToDatabase();
+        int id = user.getId();
         String sql = "UPDATE users SET name = '" + user.getName() + "', email = '" 
-                + user.getEmail() + "' WHERE id = " + user.getId();       
+                + user.getEmail() + "' WHERE id = " + id;       
         try {
             PreparedStatement statement = connection.prepareStatement(sql);
             statement.execute();
         } catch (SQLException ex) {
             Logger.getLogger(DatabaseController.class.getName()).log(Level.SEVERE, null, ex);
         }
-        return false;
+        logToDatabase("EDIT USER", id, "Edited user data with id " + id);
+        return true;
     }
     
     public boolean deleteUser(int id) {
@@ -175,6 +168,7 @@ public class DatabaseController {
         // TODO : VER SE O USER EXISTE
         
         if(!verifyIfUserExists(id)) {
+            logToDatabase("DELETE USER", id, "Failed to delete user with id " + id);
             return false;
         }
         
@@ -190,9 +184,10 @@ public class DatabaseController {
         // TODO : VERIFICAR SE O USER JA NAO EXISTE
         
         if(!verifyIfUserExists(id)) {
+            logToDatabase("DELETE USER", id, "Deleted user with id " + id);
             return true;
         }
-        
+        logToDatabase("DELETE USER", id, "Failed to delete user with id " + id);
         closeConnection();
         return false;
     }
@@ -217,6 +212,7 @@ public class DatabaseController {
             Logger.getLogger(DatabaseController.class.getName()).log(Level.SEVERE, null, ex);
         }
         closeConnection();
+        logToDatabase("listAll()", 0, "Listed all rows from 'users' table.");
         return list;
     }
     
@@ -233,5 +229,19 @@ public class DatabaseController {
             Logger.getLogger(DatabaseController.class.getName()).log(Level.SEVERE, null, ex);
         }
         return true;
+    }
+    
+    private void logToDatabase(String func, int id, String description) {
+        String sql = "INSERT INTO logs (date, description) VALUES (?, ?)";
+        dateFormatter = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+        Date date = new Date();
+        try {
+            PreparedStatement statement = connection.prepareStatement(sql);
+            statement.setString(1, date.toString());
+            statement.setString(2, func + " - " + description);
+            statement.execute();
+        } catch (SQLException ex) {
+            Logger.getLogger(DatabaseController.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 }
